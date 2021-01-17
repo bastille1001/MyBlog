@@ -1,34 +1,62 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MyBlog.Data.Repository;
 using MyBlog.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace MyBlog.Controllers
 {
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        private readonly IRepository repo;
+
+        public HomeController(IRepository repo)
         {
-            return View();
+            this.repo = repo;
         }
 
-        public IActionResult Post()
+        public IActionResult Index()
         {
-            return View();
+            var posts = repo.GetAllPosts();
+            return View(posts);
+        }
+
+        public IActionResult Post(int id)
+        {
+            var post = repo.GetPost(id);
+            return View(post);
         }
 
         [HttpGet]
-        public IActionResult Edit()
+        public IActionResult Edit(int? id)
         {
-            return View(new Post());
+            if (id == null)
+                return View(new Post());
+            else
+            {
+                var post = repo.GetPost((int)id);
+                return View(post);
+            }
         }
 
         [HttpPost]
-        public IActionResult Edit(Post p)
+        public async Task<IActionResult> Edit(Post p)
         {
+            if (p.Id > 0)
+                repo.UpdatePost(p);
+            else
+                repo.AddPost(p);
+
+            if (await repo.SaveChangesAsync())
+                return RedirectToAction("Index");
+            else
+                return View(p);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Remove(int id)
+        {
+            repo.RemovePost(id);
+            await repo.SaveChangesAsync();
             return RedirectToAction("Index");
         }
     }
