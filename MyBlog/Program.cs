@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using MyBlog.Data;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace MyBlog
 {
@@ -13,7 +12,42 @@ namespace MyBlog
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            var host = CreateHostBuilder(args).Build();
+
+            try
+            {
+                var scope = host.Services.CreateScope();
+
+                var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+                ctx.Database.EnsureCreated();
+
+                var adminRole = new IdentityRole("Admin");
+                if (!ctx.Roles.Any())
+                {
+                    roleManager.CreateAsync(adminRole).GetAwaiter().GetResult();
+                }
+
+                if (!ctx.Users.Any(u => u.UserName == "admin"))
+                {
+                    var adminUser = new IdentityUser
+                    {
+                        UserName = "admin",
+                        Email = "admin@test.com"
+                    };
+                    userManager.CreateAsync(adminUser, "password");
+                    userManager.AddToRoleAsync(adminUser, adminRole.Name).GetAwaiter().GetResult();
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            
+
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

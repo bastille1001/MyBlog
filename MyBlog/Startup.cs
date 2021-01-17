@@ -25,8 +25,18 @@ namespace MyBlog
             string connection = config.GetConnectionString("DefaultConnection");
             services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connection));
 
-            services.AddIdentity<User, IdentityRole>()
+            services.AddIdentity<IdentityUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequiredLength = 6;
+            })
                 .AddEntityFrameworkStores<AppDbContext>();
+
+            services.ConfigureApplicationCookie(options => {
+                options.LoginPath = "/Auth/Login";
+            });
 
             services.AddTransient<IRepository, Repository>();
             services.AddMvc(option => option.EnableEndpointRouting = false);
